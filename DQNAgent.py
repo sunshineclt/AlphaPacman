@@ -3,19 +3,16 @@ from keras.layers.core import Dense, Activation, Flatten
 from keras.models import Sequential
 from keras.optimizers import Adam
 
-IMG_ROWS, IMG_COLS = 160, 160
-IMG_CHANNELS = 1
-
 
 class DQNAgent:
-    def __init__(self, learning_rate):
-        self.model = self.build_model(learning_rate)
+    def __init__(self, learning_rate, img_rows, img_cols, img_channels):
+        self.model = self.build_model(learning_rate, img_rows, img_cols, img_channels)
 
-    def build_model(self, learning_rate):
+    def build_model(self, learning_rate, img_rows, img_cols, img_channels):
         print("Now we build the model")
         model = Sequential()
         model.add(Conv2D(32, (8, 8), strides=(4, 4), padding="same",
-                         input_shape=(IMG_ROWS, IMG_COLS, IMG_CHANNELS)))
+                         input_shape=(img_rows, img_cols, img_channels)))
         model.add(Activation('relu'))
         model.add(Conv2D(64, (4, 4), strides=(2, 2), padding='same'))
         model.add(Activation('relu'))

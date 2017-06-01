@@ -25,21 +25,24 @@ BATCH_SIZE = 32  # size of minibatch
 LEARNING_RATE = 1e-4
 EPISODE_COUNT = 100000
 MAX_STEPS = 10000
+IMG_ROWS = 80
+IMG_COLS = 80
+IMG_CHANNELS = 1
 
 
 def process_image(img):
     img = skimage.color.rgb2gray(img)
-    img = skimage.transform.resize(img, (160, 160), mode='constant')
+    img = skimage.transform.resize(img, (IMG_ROWS, IMG_COLS), mode='constant')
     img = skimage.exposure.rescale_intensity(img, out_range=(0, 255))
     img = np.array([img])
-    img = img.reshape(1, img.shape[1], img.shape[2], 1)  # 1*160*160*1
+    img = img.reshape(1, IMG_ROWS, IMG_COLS, 1)
     return img
 
 
 def train(sess):
     env = gym.make('MsPacman-v0')
     buffer = ReplayBuffer(100000)
-    agent = DQNAgent(LEARNING_RATE)
+    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
     sess.run(tf.global_variables_initializer())
 
     print("Now we save model")
@@ -131,7 +134,7 @@ def train(sess):
 
 def play(sess):
     env = gym.make('MsPacman-v0')
-    agent = DQNAgent(LEARNING_RATE)
+    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
     print("Now we load weight")
     agent.model.load_weights("/Developer/Python/AlphaPacman/model.h5")
     print("Weight load successfully")
