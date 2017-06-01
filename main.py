@@ -45,11 +45,6 @@ def train(sess):
     agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
     sess.run(tf.global_variables_initializer())
 
-    print("Now we save model")
-    agent.model.save_weights("model.h5", overwrite=True)
-    with open("model.json", "w") as outfile:
-        json.dump(agent.model.to_json(), outfile)
-
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
         s_t = env.reset()
