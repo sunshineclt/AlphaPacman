@@ -164,10 +164,10 @@ def play():
 
         # print info
         print("TIMESTEP", step,
-              "/ EPSILON", epsilon,
               "/ ACTION", action_index,
               "/ REWARD", r_t,
-              "/ Loss ", loss)
+              "/ Loss ", loss,
+              "/ EPSILON", epsilon)
 
         if terminal:
             break
