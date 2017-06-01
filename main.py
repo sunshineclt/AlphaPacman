@@ -1,0 +1,185 @@
+#!/usr/bin/env python
+from __future__ import print_function
+
+import argparse
+
+import gym
+import json
+import random
+import tensorflow as tf
+from keras import backend as K
+import numpy as np
+from skimage import transform, color, exposure
+import skimage as skimage
+
+from DQNAgent import DQNAgent
+from ReplayBuffer import ReplayBuffer
+
+ACTIONS = 9  # number of valid actions
+GAMMA = 0.99  # decay rate of past observations
+EXPLORE = 3000000.  # frames over which to anneal epsilon
+INITIAL_EPSILON = 0.1  # starting value of epsilon
+FINAL_EPSILON = 0.0001  # final value of epsilon
+REPLAY_MEMORY = 50000  # number of previous transitions to remember
+BATCH_SIZE = 32  # size of minibatch
+LEARNING_RATE = 1e-4
+EPISODE_COUNT = 100000
+MAX_STEPS = 10000
+
+
+def process_image(img):
+    img = skimage.color.rgb2gray(img)
+    img = skimage.transform.resize(img, (160, 160), mode='constant')
+    img = skimage.exposure.rescale_intensity(img, out_range=(0, 255))
+    img = np.array([img])
+    img = img.reshape(1, img.shape[1], img.shape[2], 1)  # 1*160*160*1
+    return img
+
+
+def train(sess):
+    env = gym.make('MsPacman-v0')
+    buffer = ReplayBuffer(100000)
+    agent = DQNAgent(LEARNING_RATE)
+    sess.run(tf.global_variables_initializer())
+
+    for episode in range(EPISODE_COUNT):
+        print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
+        s_t = env.reset()
+        s_t = process_image(s_t)
+        loss = 0
+        total_reward = 0
+        epsilon = INITIAL_EPSILON
+
+        for step in range(MAX_STEPS):
+
+            # choose an action epsilon greedy
+            a_t = np.zeros([ACTIONS])
+            if random.random() <= epsilon:
+                action_index = random.randrange(ACTIONS)
+                a_t[action_index] = 1
+            else:
+                q = agent.model.predict(s_t)
+                action_index = np.argmax(q)
+                a_t[action_index] = 1
+            print("The action taken is: ", action_index)
+
+            # reduce the epsilon gradually
+            if epsilon > FINAL_EPSILON:
+                epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+
+            # run the selected action and observed next state and reward
+            s_t1_colored, r_t, terminal, info = env.step(action_index)
+            total_reward += r_t
+            s_t1 = process_image(s_t1_colored)
+
+            # store the transition in buffer
+            buffer.add((s_t, action_index, r_t, s_t1, terminal))
+
+            # sample a minibatch to train on
+            minibatch = buffer.get_batch(BATCH_SIZE)
+
+            inputs = np.zeros((BATCH_SIZE, s_t.shape[1], s_t.shape[2], s_t.shape[3]))  # 32, 80, 80, 4
+            targets = np.zeros((BATCH_SIZE, ACTIONS))
+
+            # train
+            for i in range(0, len(minibatch)):
+                state_t = minibatch[i][0]
+                action_t = minibatch[i][1]  # This is action index
+                reward_t = minibatch[i][2]
+                state_t1 = minibatch[i][3]
+                terminal = minibatch[i][4]
+
+                targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
+                q = agent.model.predict(state_t1)
+
+                if terminal:
+                    targets[i, action_t] = reward_t
+                else:
+                    targets[i, action_t] = reward_t + GAMMA * np.max(q)
+
+            # targets2 = normalize(targets)
+            loss += agent.model.train_on_batch(inputs, targets)
+
+            s_t = s_t1
+
+            # save progress every 1000 iterations
+            if step % 1000 == 0:
+                print("Now we save model")
+                agent.model.save_weights("model.h5", overwrite=True)
+                with open("model.json", "w") as outfile:
+                    json.dump(agent.model.to_json(), outfile)
+
+            # print info
+            print("TIMESTEP", step,
+                  "/ EPSILON", epsilon,
+                  "/ ACTION", action_index,
+                  "/ REWARD", r_t,
+                  "/ Loss ", loss)
+
+            if terminal:
+                break
+
+        print("Episode: " + str(episode) + " finished!")
+        print("************************")
+
+
+def play(sess):
+    env = gym.make('MsPacman-v0')
+    agent = DQNAgent(LEARNING_RATE)
+    print("Now we load weight")
+    agent.model.load_weights("model.h5")
+    print("Weight load successfully")
+
+    s_t = env.reset()
+    s_t = process_image(s_t)
+    loss = 0
+    total_reward = 0
+    epsilon = INITIAL_EPSILON
+    for step in range(MAX_STEPS):
+
+        # choose an action epsilon greedy
+        a_t = np.zeros([ACTIONS])
+        if random.random() <= epsilon:
+            print("----------Random Action----------")
+            action_index = random.randrange(ACTIONS)
+            a_t[action_index] = 1
+        else:
+            q = agent.model.predict(s_t)
+            action_index = np.argmax(q)
+            a_t[action_index] = 1
+        print("The action taken is: ", action_index)
+
+        # run the selected action and observed next state and reward
+        s_t1_colored, r_t, terminal = env.step(action_index)
+        total_reward += r_t
+        s_t1 = process_image(s_t1_colored)
+        s_t = s_t1
+
+        # print info
+        print("TIMESTEP", step,
+              "/ EPSILON", epsilon,
+              "/ ACTION", action_index,
+              "/ REWARD", r_t,
+              "/ Loss ", loss)
+
+        if terminal:
+            break
+    print("Game ended, Total rewards: " + str(total_reward))
+
+
+def main(sess):
+    parser = argparse.ArgumentParser(description='AlphaPacman')
+    parser.add_argument('-m', '--mode', help='Train / Run', required=True)
+    args = vars(parser.parse_args())
+    if args["mode"] == 'Train':
+        train(sess)
+    else:
+        play(sess)
+
+
+if __name__ == "__main__":
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth = True
+    sess = tf.Session(config=config)
+    K.set_session(sess)
+    main(sess)
