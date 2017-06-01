@@ -114,10 +114,10 @@ def train(sess, load_weight):
 
             # print info
             print("TIMESTEP", step,
-                  "/ EPSILON", epsilon,
                   "/ ACTION", action_index,
                   "/ REWARD", r_t,
-                  "/ Loss ", loss)
+                  "/ Loss ", loss,
+                  "/ EPSILON", epsilon)
 
             if terminal:
                 break
@@ -154,7 +154,6 @@ def play():
         q = agent.model.predict(s_t)
         action_index = np.argmax(q)
         a_t[action_index] = 1
-        print("The action taken is: ", action_index)
 
         # run the selected action and observed next state and reward
         s_t1_colored, r_t, terminal, info = env.step(action_index)
