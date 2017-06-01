@@ -42,6 +42,11 @@ def train(sess):
     agent = DQNAgent(LEARNING_RATE)
     sess.run(tf.global_variables_initializer())
 
+    print("Now we save model")
+    agent.model.save_weights("model.h5", overwrite=True)
+    with open("model.json", "w") as outfile:
+        json.dump(agent.model.to_json(), outfile)
+
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
         s_t = env.reset()
@@ -102,13 +107,6 @@ def train(sess):
 
             s_t = s_t1
 
-            # save progress every 1000 iterations
-            if step % 1000 == 0:
-                print("Now we save model")
-                agent.model.save_weights("model.h5", overwrite=True)
-                with open("model.json", "w") as outfile:
-                    json.dump(agent.model.to_json(), outfile)
-
             # print info
             print("TIMESTEP", step,
                   "/ EPSILON", epsilon,
@@ -119,15 +117,24 @@ def train(sess):
             if terminal:
                 break
 
-        print("Episode: " + str(episode) + " finished!")
         print("************************")
+        print("Episode: " + str(episode) + " finished!")
+        print("Total reward: ", total_reward)
+        print("************************")
+
+        # save progress every 1000 iterations
+        if episode % 1000 == 0:
+            print("Now we save model")
+            agent.model.save_weights("model.h5", overwrite=True)
+            with open("model.json", "w") as outfile:
+                json.dump(agent.model.to_json(), outfile)
 
 
 def play(sess):
     env = gym.make('MsPacman-v0')
     agent = DQNAgent(LEARNING_RATE)
     print("Now we load weight")
-    agent.model.load_weights("model.h5")
+    agent.model.load_weights("/Developer/Python/AlphaPacman/model.h5")
     print("Weight load successfully")
 
     s_t = env.reset()
@@ -136,21 +143,16 @@ def play(sess):
     total_reward = 0
     epsilon = INITIAL_EPSILON
     for step in range(MAX_STEPS):
-
+        env.render()
         # choose an action epsilon greedy
         a_t = np.zeros([ACTIONS])
-        if random.random() <= epsilon:
-            print("----------Random Action----------")
-            action_index = random.randrange(ACTIONS)
-            a_t[action_index] = 1
-        else:
-            q = agent.model.predict(s_t)
-            action_index = np.argmax(q)
-            a_t[action_index] = 1
+        q = agent.model.predict(s_t)
+        action_index = np.argmax(q)
+        a_t[action_index] = 1
         print("The action taken is: ", action_index)
 
         # run the selected action and observed next state and reward
-        s_t1_colored, r_t, terminal = env.step(action_index)
+        s_t1_colored, r_t, terminal, info = env.step(action_index)
         total_reward += r_t
         s_t1 = process_image(s_t1_colored)
         s_t = s_t1

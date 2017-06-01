@@ -139,3 +139,5 @@ ENV/
 # Rope project settings
 .ropeproject
 
+*.h5
+*.json
