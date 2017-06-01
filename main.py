@@ -177,7 +177,7 @@ def play():
 def main(sess):
     parser = argparse.ArgumentParser(description='AlphaPacman')
     parser.add_argument('-m', '--mode', help='Train / Run', required=True)
-    parser.add_argument('-l', '--load', action="store_true", help='Whether to load weight or not', required=True)
+    parser.add_argument('-l', '--load', action="store_true", help='Whether to load weight or not', required=False)
     args = vars(parser.parse_args())
     if args["mode"] == 'Train':
         train(sess, args["load"])
