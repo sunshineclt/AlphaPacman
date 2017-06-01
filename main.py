@@ -18,9 +18,9 @@ from ReplayBuffer import ReplayBuffer
 ACTIONS = 9  # number of valid actions
 GAMMA = 0.99  # decay rate of past observations
 EXPLORE = 3000000.  # frames over which to anneal epsilon
-INITIAL_EPSILON = 0.5  # starting value of epsilon
+INITIAL_EPSILON = 0.3  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
-REPLAY_MEMORY = 10000  # number of previous transitions to remember
+REPLAY_MEMORY = 30000  # number of previous transitions to remember
 BATCH_SIZE = 32  # size of minibatch
 LEARNING_RATE = 1e-4
 EPISODE_COUNT = 100000
@@ -28,6 +28,8 @@ MAX_STEPS = 10000
 IMG_ROWS = 80
 IMG_COLS = 80
 IMG_CHANNELS = 1
+
+WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
 
 
 def process_image(img):
@@ -39,11 +41,17 @@ def process_image(img):
     return img
 
 
-def train(sess):
+def train(sess, load_weight):
     env = gym.make('MsPacman-v0')
     buffer = ReplayBuffer(100000)
     agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
-    sess.run(tf.global_variables_initializer())
+
+    if load_weight:
+        print("Now we load weight")
+        agent.model.load_weights(WEIGHT_PATH + "model.h5")
+        print("Weight load successfully")
+    else:
+        sess.run(tf.global_variables_initializer())
 
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
@@ -127,11 +135,11 @@ def train(sess):
                 json.dump(agent.model.to_json(), outfile)
 
 
-def play(sess):
+def play():
     env = gym.make('MsPacman-v0')
     agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
     print("Now we load weight")
-    agent.model.load_weights("/Developer/Python/AlphaPacman/model.h5")
+    agent.model.load_weights(WEIGHT_PATH + "model.h5")
     print("Weight load successfully")
 
     s_t = env.reset()
@@ -169,11 +177,12 @@ def play(sess):
 def main(sess):
     parser = argparse.ArgumentParser(description='AlphaPacman')
     parser.add_argument('-m', '--mode', help='Train / Run', required=True)
+    parser.add_argument('-l', '--load', action="store_true", help='Whether to load weight or not', required=True)
     args = vars(parser.parse_args())
     if args["mode"] == 'Train':
-        train(sess)
+        train(sess, args["load"])
     else:
-        play(sess)
+        play()
 
 
 if __name__ == "__main__":
