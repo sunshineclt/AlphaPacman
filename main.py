@@ -18,9 +18,9 @@ from ReplayBuffer import ReplayBuffer
 ACTIONS = 9  # number of valid actions
 GAMMA = 0.99  # decay rate of past observations
 EXPLORE = 3000000.  # frames over which to anneal epsilon
-INITIAL_EPSILON = 0.1  # starting value of epsilon
+INITIAL_EPSILON = 0.5  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
-REPLAY_MEMORY = 50000  # number of previous transitions to remember
+REPLAY_MEMORY = 10000  # number of previous transitions to remember
 BATCH_SIZE = 32  # size of minibatch
 LEARNING_RATE = 1e-4
 EPISODE_COUNT = 100000
@@ -66,7 +66,6 @@ def train(sess):
                 q = agent.model.predict(s_t)
                 action_index = np.argmax(q)
                 a_t[action_index] = 1
-            print("The action taken is: ", action_index)
 
             # reduce the epsilon gradually
             if epsilon > FINAL_EPSILON:
