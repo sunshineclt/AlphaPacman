@@ -53,13 +53,14 @@ def train(sess, load_weight):
     else:
         sess.run(tf.global_variables_initializer())
 
+    epsilon = INITIAL_EPSILON
+
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
         s_t = env.reset()
         s_t = process_image(s_t)
         loss = 0
         total_reward = 0
-        epsilon = INITIAL_EPSILON
 
         for step in range(MAX_STEPS):
 
