@@ -20,7 +20,7 @@ GAMMA = 0.99  # decay rate of past observations
 EXPLORE = 3000000.  # frames over which to anneal epsilon
 INITIAL_EPSILON = 0.3  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
-REPLAY_MEMORY = 100000  # number of previous transitions to remember
+REPLAY_MEMORY = 10000  # number of previous transitions to remember
 BATCH_SIZE = 32  # size of minibatch
 LEARNING_RATE = 1e-3
 EPISODE_COUNT = 100000
@@ -122,6 +122,9 @@ def train(sess, load_weight):
                   "/ EPSILON", epsilon)
 
             if terminal:
+                print("************************")
+                print("Terminal is true!")
+                print("************************")
                 break
 
         print("************************")
