@@ -65,6 +65,10 @@ def train(sess, load_weight):
 
         for step in range(MAX_STEPS):
             env.render()
+            if step < 80:
+                env.step(0)
+                continue
+
             # choose an action epsilon greedy
             a_t = np.zeros([ACTIONS])
             if random.random() <= epsilon:
