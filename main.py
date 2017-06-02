@@ -64,7 +64,7 @@ def train(sess, load_weight):
         total_reward = 0
 
         for step in range(MAX_STEPS):
-
+            env.render()
             # choose an action epsilon greedy
             a_t = np.zeros([ACTIONS])
             if random.random() <= epsilon:
