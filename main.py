@@ -99,12 +99,12 @@ def train(sess, load_weight):
                 action_t = minibatch[i][1]  # This is action index
                 reward_t = minibatch[i][2]
                 state_t1 = minibatch[i][3]
-                terminal = minibatch[i][4]
+                terminal_t = minibatch[i][4]
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
                 q = agent.model.predict(state_t1)
 
-                if terminal:
+                if terminal_t:
                     targets[i, action_t] = reward_t
                 else:
                     targets[i, action_t] = reward_t + GAMMA * np.max(q)
