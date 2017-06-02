@@ -1,7 +1,8 @@
 from keras.initializers import random_normal
-from keras.layers import Conv2D
-from keras.layers.core import Dense, Activation, Flatten
+from keras.layers import Conv2D, MaxPool2D
+from keras.layers.core import Dense, Flatten
 from keras.layers.advanced_activations import LeakyReLU
+from keras.layers.normalization import BatchNormalization
 from keras.models import Sequential
 from keras.optimizers import Adam
 
@@ -13,14 +14,17 @@ class DQNAgent:
     def build_model(self, learning_rate, img_rows, img_cols, img_channels, initialize_stddev):
         print("Now we build the model")
         model = Sequential()
-        model.add(Conv2D(32, (8, 8), strides=(4, 4), padding="same",
+        model.add(Conv2D(16, (8, 8), strides=(4, 4), padding="same",
                          input_shape=(img_rows, img_cols, img_channels),
                          kernel_initializer=random_normal(stddev=initialize_stddev)))
         model.add(LeakyReLU())
-        model.add(Conv2D(64, (4, 4), strides=(2, 2), padding='same',
+        model.add(MaxPool2D())
+        model.add(Conv2D(32, (4, 4), strides=(2, 2), padding='same',
                          kernel_initializer=random_normal(stddev=initialize_stddev)))
+        model.add(BatchNormalization())
         model.add(LeakyReLU())
-        model.add(Conv2D(64, (3, 3), strides=(1, 1), padding='same',
+        model.add(MaxPool2D())
+        model.add(Conv2D(32, (3, 3), strides=(1, 1), padding='same',
                          kernel_initializer=random_normal(stddev=initialize_stddev)))
         model.add(LeakyReLU())
         model.add(Flatten())
