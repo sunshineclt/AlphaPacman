@@ -130,7 +130,7 @@ def train(sess, load_weight):
         print("************************")
 
         # save progress every 1000 iterations
-        if episode % 1000 == 0:
+        if episode % 100 == 0:
             print("Now we save model")
             agent.model.save_weights("model.h5", overwrite=True)
             with open("model.json", "w") as outfile:
