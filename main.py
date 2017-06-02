@@ -122,9 +122,6 @@ def train(sess, load_weight):
                   "/ EPSILON", epsilon)
 
             if terminal:
-                print("************************")
-                print("Terminal is true!")
-                print("************************")
                 break
 
         print("************************")
