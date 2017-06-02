@@ -22,12 +22,13 @@ INITIAL_EPSILON = 0.3  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
 REPLAY_MEMORY = 100000  # number of previous transitions to remember
 BATCH_SIZE = 32  # size of minibatch
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-3
 EPISODE_COUNT = 100000
 MAX_STEPS = 10000
 IMG_ROWS = 80
 IMG_COLS = 80
 IMG_CHANNELS = 1
+INITIALIZE_STDDEV = 0.01
 
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
 
@@ -44,7 +45,7 @@ def process_image(img):
 def train(sess, load_weight):
     env = gym.make('MsPacman-v0')
     buffer = ReplayBuffer(100000)
-    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
+    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS, INITIALIZE_STDDEV)
 
     if load_weight:
         print("Now we load weight")
@@ -138,7 +139,7 @@ def train(sess, load_weight):
 
 def play():
     env = gym.make('MsPacman-v0')
-    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS)
+    agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS, INITIALIZE_STDDEV)
     print("Now we load weight")
     agent.model.load_weights(WEIGHT_PATH + "model.h5")
     print("Weight load successfully")
