@@ -2,15 +2,15 @@
 from __future__ import print_function
 
 import argparse
-
-import gym
 import json
 import random
+
+import gym
+import numpy as np
+import skimage as skimage
 import tensorflow as tf
 from keras import backend as K
-import numpy as np
-from skimage import transform, color, exposure
-import skimage as skimage
+from skimage import color, transform, exposure
 
 from DQNAgent import DQNAgent
 from ReplayBuffer import ReplayBuffer
@@ -33,8 +33,8 @@ INITIALIZE_STDDEV = 0.01
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
 
 
-def process_image(img):
-    img = skimage.color.rgb2gray(img)
+def process_image(image):
+    img = skimage.color.rgb2gray(image)
     img = skimage.transform.resize(img, (IMG_ROWS, IMG_COLS), mode='constant')
     img = skimage.exposure.rescale_intensity(img, out_range=(0, 255))
     img = np.array([img])
