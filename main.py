@@ -17,16 +17,16 @@ from ReplayBuffer import ReplayBuffer
 
 ACTIONS = 9  # number of valid actions
 GAMMA = 0.99  # decay rate of past observations
-EXPLORE = 3000000.  # frames over which to anneal epsilon
-INITIAL_EPSILON = 0.1  # starting value of epsilon
+EXPLORE = 300000.  # frames over which to anneal epsilon
+INITIAL_EPSILON = 0.5  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
 REPLAY_MEMORY = 10000  # number of previous transitions to remember
 BATCH_SIZE = 32  # size of minibatch
 LEARNING_RATE = 1e-3
 EPISODE_COUNT = 100000
 MAX_STEPS = 10000
-IMG_ROWS = 84
-IMG_COLS = 110
+IMG_ROWS = 64
+IMG_COLS = 96
 IMG_CHANNELS = 1
 INITIALIZE_STDDEV = 0.01
 
