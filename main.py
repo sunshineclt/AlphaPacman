@@ -16,7 +16,7 @@ from DQNAgent import DQNAgent
 from ReplayBuffer import ReplayBuffer
 
 ACTIONS = 9  # number of valid actions
-GAMMA = 0.99  # decay rate of past observations
+GAMMA = 0.9  # decay rate of past observations
 EXPLORE = 300000.  # frames over which to anneal epsilon
 INITIAL_EPSILON = 0.5  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
@@ -158,6 +158,8 @@ def play():
         # choose an action epsilon greedy
         a_t = np.zeros([ACTIONS])
         q = agent.model.predict(s_t)
+        print("TIMESTEP", step,
+              "/ ACTION_PREDICTION", q)
         action_index = np.argmax(q)
         a_t[action_index] = 1
 
