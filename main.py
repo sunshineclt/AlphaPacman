@@ -94,7 +94,7 @@ def train(sess, load_weight):
             # sample a minibatch to train on
             minibatch = buffer.get_batch(BATCH_SIZE)
 
-            inputs = np.zeros((BATCH_SIZE, s_t.shape[1], s_t.shape[2], s_t.shape[3]))  # 32, 80, 80, 4
+            inputs = np.zeros((BATCH_SIZE, s_t.shape[1], s_t.shape[2], s_t.shape[3]))
             targets = np.zeros((BATCH_SIZE, ACTIONS))
 
             # train
@@ -107,6 +107,8 @@ def train(sess, load_weight):
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
                 q = agent.model.predict(state_t1)
+
+                inputs[i] = state_t
 
                 if terminal_t:
                     targets[i, action_t] = reward_t
