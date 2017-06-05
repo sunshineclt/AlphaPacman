@@ -16,12 +16,12 @@ from DQNAgent import DQNAgent
 from ReplayBuffer import ReplayBuffer
 
 ACTIONS = 9  # number of valid actions
-GAMMA = 0.9  # decay rate of past observations
+GAMMA = 0.99  # decay rate of past observations
 EXPLORE = 300000.  # frames over which to anneal epsilon
-INITIAL_EPSILON = 0.5  # starting value of epsilon
+INITIAL_EPSILON = 0.4  # starting value of epsilon
 FINAL_EPSILON = 0.0001  # final value of epsilon
-REPLAY_MEMORY = 10000  # number of previous transitions to remember
-BATCH_SIZE = 32  # size of minibatch
+REPLAY_MEMORY = 100000  # number of previous transitions to remember
+BATCH_SIZE = 64  # size of minibatch
 LEARNING_RATE = 1e-3
 EPISODE_COUNT = 100000
 MAX_STEPS = 10000
