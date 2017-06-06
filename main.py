@@ -56,7 +56,7 @@ def train(sess, load_weight):
 
     epsilon = INITIAL_EPSILON
     # prepare for tensorboard
-    r_tfboard = tf.Variable()
+    r_tfboard = tf.Variable(0.0)
     r_summary = tf.summary.scalar("Reward", r_tfboard)
     summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
     merged_summary_op = tf.summary.merge_all()
