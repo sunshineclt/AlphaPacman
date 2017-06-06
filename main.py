@@ -62,34 +62,57 @@ def train(sess, load_weight):
         s_t = process_image(s_t)
         loss = 0
         total_reward = 0
-
-        for step in range(MAX_STEPS):
+        step = 0
+        life_count = 3
+        while step < 80:
             env.render()
-            if step < 80:
-                env.step(0)
-                continue
+            env.step(0)
+            step += 1
 
-            # choose an action epsilon greedy
-            a_t = np.zeros([ACTIONS])
+        a_t = np.zeros([ACTIONS])
+        if random.random() <= epsilon:
+            action_index = random.randrange(ACTIONS)
+            a_t[action_index] = 1
+        else:
+            q = agent.model.predict(s_t)
+            action_index = np.argmax(q)
+            a_t[action_index] = 1
+        
+        if epsilon > FINAL_EPSILON:
+            epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+
+        while step < MAX_STEPS:
+            env.render()
+            # take action, observe new state
+
+            s_t1_colored, r_t, terminal, info = env.step(action_index)
+            
+            # whether be eaten by ghost
+            terminal_by_ghost = False
+            if life_count > info['ale.lives'] or terminal :
+                terminal_by_ghost = True
+            life_count = info['ale.lives']
+            total_reward += r_t
+            s_t1 = process_image(s_t1_colored)
+
+            # choose new action a_t1 from s_t1 using policy same as Q  
+            if_random = False         
+            a_t1 = np.zeros([ACTIONS])
             if random.random() <= epsilon:
-                action_index = random.randrange(ACTIONS)
-                a_t[action_index] = 1
+                if_random = True
+                action_index1 = random.randrange(ACTIONS)
+                a_t1[action_index1] = 1
             else:
-                q = agent.model.predict(s_t)
-                action_index = np.argmax(q)
-                a_t[action_index] = 1
+                q = agent.model.predict(s_t1)
+                action_index1 = np.argmax(q)
+                a_t1[action_index1] = 1
 
             # reduce the epsilon gradually
             if epsilon > FINAL_EPSILON:
                 epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 
-            # run the selected action and observed next state and reward
-            s_t1_colored, r_t, terminal, info = env.step(action_index)
-            total_reward += r_t
-            s_t1 = process_image(s_t1_colored)
-
             # store the transition in buffer
-            buffer.add((s_t, action_index, r_t, s_t1, terminal))
+            buffer.add((s_t, action_index, r_t, s_t1, action_index1, terminal_by_ghost))
 
             # sample a minibatch to train on
             minibatch = buffer.get_batch(BATCH_SIZE)
@@ -103,30 +126,35 @@ def train(sess, load_weight):
                 action_t = minibatch[i][1]  # This is action index
                 reward_t = minibatch[i][2]
                 state_t1 = minibatch[i][3]
-                terminal_t = minibatch[i][4]
+                action_next = minibatch[i][4]
+                terminal_t = minibatch[i][5]
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
                 q = agent.model.predict(state_t1)
-
+                #print (action_next, q)
                 inputs[i] = state_t
 
                 if terminal_t:
                     targets[i, action_t] = reward_t
                 else:
-                    targets[i, action_t] = reward_t + GAMMA * np.max(q)
+                    targets[i, action_t] = reward_t + GAMMA * q[0][action_next]
 
             # targets2 = normalize(targets)
             loss += agent.model.train_on_batch(inputs, targets)
 
             s_t = s_t1
-
+            #action_index = action_index1
+            step += 1
             # print info
             print("TIMESTEP", step,
                   "/ ACTION", action_index,
+                  "/ Next", action_index1,
+                  "/ Random", if_random,
                   "/ REWARD", r_t,
                   "/ Loss ", loss,
-                  "/ EPSILON", epsilon)
-
+                  "/ EPSILON", epsilon,
+                  "/ eaten", terminal_by_ghost)
+            action_index = action_index1
             if terminal:
                 break
 
