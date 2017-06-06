@@ -58,7 +58,7 @@ def train(sess, load_weight):
     # prepare for tensorboard
     r_tfboard = tf.Variable()
     r_summary = tf.summary.scalar("Reward", r_tfboard)
-    summary_writer = tf.summary.FileWriter('./log')
+    summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
     merged_summary_op = tf.summary.merge_all()
 
     for episode in range(EPISODE_COUNT):
