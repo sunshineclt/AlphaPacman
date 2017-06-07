@@ -74,6 +74,7 @@ def train(sess, load_weight):
             step += 1
 
         # get one channel
+        env.render()
         x_t,_,_,_ = env.step(0)
         #print(x_t.shape)
         x_t = skimage.color.rgb2gray(x_t)
