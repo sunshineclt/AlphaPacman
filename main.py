@@ -27,7 +27,7 @@ EPISODE_COUNT = 100000
 MAX_STEPS = 10000
 IMG_ROWS = 64
 IMG_COLS = 96
-IMG_CHANNELS = 1
+IMG_CHANNELS = 4
 INITIALIZE_STDDEV = 0.01
 
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
@@ -61,40 +61,65 @@ def train(sess, load_weight):
     summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
     merged_summary_op = tf.summary.merge_all()
 
+    # start training
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
-        s_t = env.reset()
-        s_t = process_image(s_t)
+        x_t = env.reset()
+        x_t = process_image(x_t)
         loss = 0
         total_reward = 0
-
-        for step in range(MAX_STEPS):
+        step = 0
+        life_count = 3
+        while step < 80:
             env.render()
-            if step < 80:
-                env.step(0)
-                continue
+            env.step(0)
+            step += 1
 
-            # choose an action epsilon greedy
-            a_t = np.zeros([ACTIONS])
+        # get one channel
+        env.render()
+        x_t, _, _, _ = env.step(0)
+        x_t = skimage.color.rgb2gray(x_t)
+        x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
+        x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
+        s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+        s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
+
+        if random.random() <= epsilon:
+            action_index = random.randrange(ACTIONS)
+        else:
+            q = agent.model.predict(s_t)
+            action_index = np.argmax(q)
+        if epsilon > FINAL_EPSILON:
+            epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
+
+        while step < MAX_STEPS:
+            env.render()
+            # take action, observe new state
+            x_t1_colored, r_t, terminal, info = env.step(action_index)
+
+            terminal_by_ghost = False  # whether be eaten by ghost
+            if life_count > info['ale.lives'] or terminal:
+                terminal_by_ghost = True
+            life_count = info['ale.lives']
+
+            total_reward += r_t
+            x_t1 = process_image(x_t1_colored)
+            s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
+
+            # choose new action a_t1 from s_t1 using policy same as Q  
+            if_random = False
             if random.random() <= epsilon:
-                action_index = random.randrange(ACTIONS)
-                a_t[action_index] = 1
+                if_random = True
+                a_t1 = random.randrange(ACTIONS)
             else:
-                q = agent.model.predict(s_t)
-                action_index = np.argmax(q)
-                a_t[action_index] = 1
-
+                q = agent.model.predict(s_t1)
+                a_t1 = np.argmax(q)
             # reduce the epsilon gradually
             if epsilon > FINAL_EPSILON:
                 epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 
-            # run the selected action and observed next state and reward
-            s_t1_colored, r_t, terminal, info = env.step(action_index)
-            total_reward += r_t
-            s_t1 = process_image(s_t1_colored)
-
             # store the transition in buffer
-            buffer.add((s_t, action_index, r_t, s_t1, terminal))
+            buffer.add((s_t, action_index, r_t, s_t1, a_t1, terminal_by_ghost))
 
             # sample a minibatch to train on
             minibatch = buffer.get_batch(BATCH_SIZE)
@@ -108,31 +133,33 @@ def train(sess, load_weight):
                 action_t = minibatch[i][1]  # This is action index
                 reward_t = minibatch[i][2]
                 state_t1 = minibatch[i][3]
-                terminal_t = minibatch[i][4]
+                action_t1 = minibatch[i][4]
+                terminal_t = minibatch[i][5]
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
                 q = agent.model.predict(state_t1)
-
                 inputs[i] = state_t
 
                 if terminal_t:
                     targets[i, action_t] = reward_t
                 else:
-                    targets[i, action_t] = reward_t + GAMMA * np.max(q)
+                    targets[i, action_t] = reward_t + GAMMA * q[0][action_t1]
 
-            # targets2 = normalize(targets)
             loss += agent.model.train_on_batch(inputs, targets)
 
             s_t = s_t1
-
+            action_index = a_t1
+            step += 1
             # print info
             print("TIMESTEP", step,
                   "/ ACTION", action_index,
+                  "/ Next", a_t1,
+                  "/ Random", if_random,
                   "/ REWARD", r_t,
                   "/ Loss ", loss,
-                  "/ EPSILON", epsilon)
-
-            if terminal:
+                  "/ EPSILON", epsilon,
+                  "/ eaten", terminal_by_ghost)
+            if terminal or terminal_by_ghost:
                 break
 
         print("************************")
@@ -148,8 +175,8 @@ def train(sess, load_weight):
         # save progress every 1000 iterations
         if episode % 100 == 0:
             print("Now we save model")
-            agent.model.save_weights("model.h5", overwrite=True)
-            with open("model.json", "w") as outfile:
+            agent.model.save_weights("model_2.h5", overwrite=True)
+            with open("model_2.json", "w") as outfile:
                 json.dump(agent.model.to_json(), outfile)
 
 
@@ -159,26 +186,38 @@ def play():
     print("Now we load weight")
     agent.model.load_weights(WEIGHT_PATH + "model.h5")
     print("Weight load successfully")
+    step = 0
+    x_t = env.reset()
+    while step < 80:
+        env.render()
+        env.step(0)
+        step += 1
 
-    s_t = env.reset()
-    s_t = process_image(s_t)
     loss = 0
     total_reward = 0
     epsilon = INITIAL_EPSILON
+
+    env.reder()
+    x_t, _, _, _ = env.step(0)
+    x_t = skimage.color.rgb2gray(x_t)
+    x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
+    x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
+    s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+    s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
+
     for step in range(MAX_STEPS):
         env.render()
         # choose an action epsilon greedy
-        a_t = np.zeros([ACTIONS])
         q = agent.model.predict(s_t)
         print("TIMESTEP", step,
               "/ ACTION_PREDICTION", q)
         action_index = np.argmax(q)
-        a_t[action_index] = 1
 
         # run the selected action and observed next state and reward
-        s_t1_colored, r_t, terminal, info = env.step(action_index)
+        x_t1_colored, r_t, terminal, info = env.step(action_index)
         total_reward += r_t
-        s_t1 = process_image(s_t1_colored)
+        x_t1 = process_image(x_t1_colored)
+        s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
         s_t = s_t1
 
         # print info
