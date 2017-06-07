@@ -27,7 +27,7 @@ EPISODE_COUNT = 100000
 MAX_STEPS = 10000
 IMG_ROWS = 64
 IMG_COLS = 96
-IMG_CHANNELS = 1
+IMG_CHANNELS = 4
 INITIALIZE_STDDEV = 0.01
 
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
@@ -63,8 +63,8 @@ def train(sess, load_weight):
 
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
-        s_t = env.reset()
-        s_t = process_image(s_t)
+        x_t = env.reset()
+        x_t = process_image(x_t)
         loss = 0
         total_reward = 0
         step = 0
@@ -73,6 +73,17 @@ def train(sess, load_weight):
             env.render()
             env.step(0)
             step += 1
+
+        # get one channel
+        x_t,_,_,_ = env.step(0)
+        #print(x_t.shape)
+        x_t = skimage.color.rgb2gray(x_t)
+        x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
+        x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
+        #x_t = np.array([x_t])
+        print (x_t.shape)
+        s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+        s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
         a_t = np.zeros([ACTIONS])
         if random.random() <= epsilon:
@@ -90,7 +101,7 @@ def train(sess, load_weight):
             env.render()
             # take action, observe new state
 
-            s_t1_colored, r_t, terminal, info = env.step(action_index)
+            x_t1_colored, r_t, terminal, info = env.step(action_index)
             
             # whether be eaten by ghost
             terminal_by_ghost = False
@@ -98,8 +109,8 @@ def train(sess, load_weight):
                 terminal_by_ghost = True
             life_count = info['ale.lives']
             total_reward += r_t
-            s_t1 = process_image(s_t1_colored)
-
+            x_t1 = process_image(x_t1_colored)
+            s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
             # choose new action a_t1 from s_t1 using policy same as Q  
             if_random = False         
             a_t1 = np.zeros([ACTIONS])
@@ -148,7 +159,6 @@ def train(sess, load_weight):
             loss += agent.model.train_on_batch(inputs, targets)
 
             s_t = s_t1
-            #action_index = action_index1
             step += 1
             # print info
             print("TIMESTEP", step,
@@ -176,8 +186,8 @@ def train(sess, load_weight):
         # save progress every 1000 iterations
         if episode % 100 == 0:
             print("Now we save model")
-            agent.model.save_weights("model.h5", overwrite=True)
-            with open("model.json", "w") as outfile:
+            agent.model.save_weights("model_2.h5", overwrite=True)
+            with open("model_2.json", "w") as outfile:
                 json.dump(agent.model.to_json(), outfile)
 
 
