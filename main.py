@@ -32,7 +32,6 @@ INITIALIZE_STDDEV = 0.01
 
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
 
-
 def process_image(image):
     img = skimage.color.rgb2gray(image)
     img = skimage.transform.resize(img, (IMG_ROWS, IMG_COLS), mode='constant')
@@ -75,13 +74,11 @@ def train(sess, load_weight):
             step += 1
 
         # get one channel
+        env.render()
         x_t,_,_,_ = env.step(0)
-        #print(x_t.shape)
         x_t = skimage.color.rgb2gray(x_t)
         x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
         x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
-        #x_t = np.array([x_t])
-        print (x_t.shape)
         s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
         s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
@@ -100,7 +97,6 @@ def train(sess, load_weight):
         while step < MAX_STEPS:
             env.render()
             # take action, observe new state
-
             x_t1_colored, r_t, terminal, info = env.step(action_index)
             
             # whether be eaten by ghost
@@ -108,9 +104,11 @@ def train(sess, load_weight):
             if life_count > info['ale.lives'] or terminal :
                 terminal_by_ghost = True
             life_count = info['ale.lives']
+
             total_reward += r_t
             x_t1 = process_image(x_t1_colored)
             s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
+
             # choose new action a_t1 from s_t1 using policy same as Q  
             if_random = False         
             a_t1 = np.zeros([ACTIONS])
@@ -197,16 +195,31 @@ def play():
     print("Now we load weight")
     agent.model.load_weights(WEIGHT_PATH + "model.h5")
     print("Weight load successfully")
-
-    s_t = env.reset()
-    s_t = process_image(s_t)
+    step = 0
+    x_t = env.reset()
+    while step < 80:
+        env.render()
+        env.step(0)
+        step += 1
+    
     loss = 0
     total_reward = 0
     epsilon = INITIAL_EPSILON
+    
+    env.reder()
+    x_t,_,_,_ = env.step(0)
+    x_t = skimage.color.rgb2gray(x_t)
+    x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
+    x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
+    s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
+    s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
+
+
     for step in range(MAX_STEPS):
         env.render()
         # choose an action epsilon greedy
         a_t = np.zeros([ACTIONS])
+
         q = agent.model.predict(s_t)
         print("TIMESTEP", step,
               "/ ACTION_PREDICTION", q)
@@ -214,9 +227,10 @@ def play():
         a_t[action_index] = 1
 
         # run the selected action and observed next state and reward
-        s_t1_colored, r_t, terminal, info = env.step(action_index)
+        x_t1_colored, r_t, terminal, info = env.step(action_index)
         total_reward += r_t
-        s_t1 = process_image(s_t1_colored)
+        x_t1 = process_image(x_t1_colored)
+        s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
         s_t = s_t1
 
         # print info
