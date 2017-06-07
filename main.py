@@ -160,7 +160,7 @@ def train(sess, load_weight):
                   "/ EPSILON", epsilon,
                   "/ eaten", terminal_by_ghost)
             action_index = action_index1
-            if terminal:
+            if terminal or terminal_by_ghost:
                 break
 
         print("************************")
