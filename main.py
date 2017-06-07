@@ -60,6 +60,7 @@ def train(sess, load_weight):
     summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
     merged_summary_op = tf.summary.merge_all()
 
+    # start training
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
         x_t = env.reset()
@@ -75,22 +76,18 @@ def train(sess, load_weight):
 
         # get one channel
         env.render()
-        x_t,_,_,_ = env.step(0)
+        x_t, _, _, _ = env.step(0)
         x_t = skimage.color.rgb2gray(x_t)
         x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
         x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
         s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
         s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
-        a_t = np.zeros([ACTIONS])
         if random.random() <= epsilon:
             action_index = random.randrange(ACTIONS)
-            a_t[action_index] = 1
         else:
             q = agent.model.predict(s_t)
             action_index = np.argmax(q)
-            a_t[action_index] = 1
-        
         if epsilon > FINAL_EPSILON:
             epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 
@@ -98,10 +95,9 @@ def train(sess, load_weight):
             env.render()
             # take action, observe new state
             x_t1_colored, r_t, terminal, info = env.step(action_index)
-            
-            # whether be eaten by ghost
-            terminal_by_ghost = False
-            if life_count > info['ale.lives'] or terminal :
+
+            terminal_by_ghost = False  # whether be eaten by ghost
+            if life_count > info['ale.lives'] or terminal:
                 terminal_by_ghost = True
             life_count = info['ale.lives']
 
@@ -110,23 +106,19 @@ def train(sess, load_weight):
             s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
 
             # choose new action a_t1 from s_t1 using policy same as Q  
-            if_random = False         
-            a_t1 = np.zeros([ACTIONS])
+            if_random = False
             if random.random() <= epsilon:
                 if_random = True
-                action_index1 = random.randrange(ACTIONS)
-                a_t1[action_index1] = 1
+                a_t1 = random.randrange(ACTIONS)
             else:
                 q = agent.model.predict(s_t1)
-                action_index1 = np.argmax(q)
-                a_t1[action_index1] = 1
-
+                a_t1 = np.argmax(q)
             # reduce the epsilon gradually
             if epsilon > FINAL_EPSILON:
                 epsilon -= (INITIAL_EPSILON - FINAL_EPSILON) / EXPLORE
 
             # store the transition in buffer
-            buffer.add((s_t, action_index, r_t, s_t1, action_index1, terminal_by_ghost))
+            buffer.add((s_t, action_index, r_t, s_t1, a_t1, terminal_by_ghost))
 
             # sample a minibatch to train on
             minibatch = buffer.get_batch(BATCH_SIZE)
@@ -140,20 +132,18 @@ def train(sess, load_weight):
                 action_t = minibatch[i][1]  # This is action index
                 reward_t = minibatch[i][2]
                 state_t1 = minibatch[i][3]
-                action_next = minibatch[i][4]
+                action_t1 = minibatch[i][4]
                 terminal_t = minibatch[i][5]
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
                 q = agent.model.predict(state_t1)
-                #print (action_next, q)
                 inputs[i] = state_t
 
                 if terminal_t:
                     targets[i, action_t] = reward_t
                 else:
-                    targets[i, action_t] = reward_t + GAMMA * q[0][action_next]
+                    targets[i, action_t] = reward_t + GAMMA * q[0][action_t1]
 
-            # targets2 = normalize(targets)
             loss += agent.model.train_on_batch(inputs, targets)
 
             s_t = s_t1
@@ -161,13 +151,13 @@ def train(sess, load_weight):
             # print info
             print("TIMESTEP", step,
                   "/ ACTION", action_index,
-                  "/ Next", action_index1,
+                  "/ Next", a_t1,
                   "/ Random", if_random,
                   "/ REWARD", r_t,
                   "/ Loss ", loss,
                   "/ EPSILON", epsilon,
                   "/ eaten", terminal_by_ghost)
-            action_index = action_index1
+            action_index = a_t1
             if terminal or terminal_by_ghost:
                 break
 
