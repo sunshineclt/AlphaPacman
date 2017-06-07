@@ -55,6 +55,11 @@ def train(sess, load_weight):
         sess.run(tf.global_variables_initializer())
 
     epsilon = INITIAL_EPSILON
+    # prepare for tensorboard
+    r_tfboard = tf.Variable(0.0)
+    r_summary = tf.summary.scalar("Reward", r_tfboard)
+    summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
+    merged_summary_op = tf.summary.merge_all()
 
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
@@ -162,6 +167,11 @@ def train(sess, load_weight):
         print("Episode: " + str(episode) + " finished!")
         print("Total reward: ", total_reward)
         print("************************")
+
+        # show reward on tensorboard
+        sess.run(tf.assign(r_tfboard, total_reward))
+        r_summary = sess.run(merged_summary_op)
+        summary_writer.add_summary(r_summary, episode)
 
         # save progress every 1000 iterations
         if episode % 100 == 0:
