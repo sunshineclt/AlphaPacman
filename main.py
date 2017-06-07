@@ -76,12 +76,9 @@ def train(sess, load_weight):
         # get one channel
         env.render()
         x_t,_,_,_ = env.step(0)
-        #print(x_t.shape)
         x_t = skimage.color.rgb2gray(x_t)
         x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
         x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
-        #x_t = np.array([x_t])
-        print (x_t.shape)
         s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
         s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
@@ -100,7 +97,6 @@ def train(sess, load_weight):
         while step < MAX_STEPS:
             env.render()
             # take action, observe new state
-
             x_t1_colored, r_t, terminal, info = env.step(action_index)
             
             # whether be eaten by ghost
