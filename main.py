@@ -32,6 +32,7 @@ INITIALIZE_STDDEV = 0.01
 
 WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
 
+
 def process_image(image):
     img = skimage.color.rgb2gray(image)
     img = skimage.transform.resize(img, (IMG_ROWS, IMG_COLS), mode='constant')
@@ -147,6 +148,7 @@ def train(sess, load_weight):
             loss += agent.model.train_on_batch(inputs, targets)
 
             s_t = s_t1
+            action_index = a_t1
             step += 1
             # print info
             print("TIMESTEP", step,
@@ -157,7 +159,6 @@ def train(sess, load_weight):
                   "/ Loss ", loss,
                   "/ EPSILON", epsilon,
                   "/ eaten", terminal_by_ghost)
-            action_index = a_t1
             if terminal or terminal_by_ghost:
                 break
 
@@ -191,30 +192,26 @@ def play():
         env.render()
         env.step(0)
         step += 1
-    
+
     loss = 0
     total_reward = 0
     epsilon = INITIAL_EPSILON
-    
+
     env.reder()
-    x_t,_,_,_ = env.step(0)
+    x_t, _, _, _ = env.step(0)
     x_t = skimage.color.rgb2gray(x_t)
     x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
     x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
     s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
     s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
-
     for step in range(MAX_STEPS):
         env.render()
         # choose an action epsilon greedy
-        a_t = np.zeros([ACTIONS])
-
         q = agent.model.predict(s_t)
         print("TIMESTEP", step,
               "/ ACTION_PREDICTION", q)
         action_index = np.argmax(q)
-        a_t[action_index] = 1
 
         # run the selected action and observed next state and reward
         x_t1_colored, r_t, terminal, info = env.step(action_index)
