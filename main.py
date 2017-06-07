@@ -107,7 +107,7 @@ def train(sess, load_weight):
             if life_count > info['ale.lives'] or terminal :
                 terminal_by_ghost = True
             life_count = info['ale.lives']
-            
+
             total_reward += r_t
             x_t1 = process_image(x_t1_colored)
             s_t1 = np.append(x_t1, s_t[:, :, :, :3], axis=3)
@@ -208,7 +208,8 @@ def play():
     loss = 0
     total_reward = 0
     epsilon = INITIAL_EPSILON
-        
+    
+    env.reder()
     x_t,_,_,_ = env.step(0)
     x_t = skimage.color.rgb2gray(x_t)
     x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
