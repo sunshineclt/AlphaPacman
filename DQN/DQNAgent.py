@@ -17,11 +17,9 @@ class DQNAgent:
         model.add(Conv2D(16, (8, 8), strides=(4, 4), padding="same",
                          input_shape=(img_rows, img_cols, img_channels),
                          kernel_initializer=random_normal(stddev=initialize_stddev)))
-        model.add(BatchNormalization())
         model.add(LeakyReLU())
         model.add(Conv2D(32, (4, 4), strides=(2, 2), padding='same',
                          kernel_initializer=random_normal(stddev=initialize_stddev)))
-        model.add(BatchNormalization())
         model.add(LeakyReLU())
         model.add(MaxPool2D())
         # model.add(Conv2D(32, (3, 3), strides=(1, 1), padding='same',
