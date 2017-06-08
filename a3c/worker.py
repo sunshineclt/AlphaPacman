@@ -16,14 +16,14 @@ class Worker(object):
     An A3C worker thread. Runs episodes locally and updates global shared value and policy nets.
     
     Args:
-    name: A unique name for this worker
-    env: The Gym environment used by this worker
-    policy_net: Instance of the globally shared policy net
-    value_net: Instance of the globally shared value net
-    global_counter: Iterator that holds the global step
-    discount_factor: Reward discount factor
-    summary_writer: A tf.train.SummaryWriter for Tensorboard summaries
-    max_global_steps: If set, stop coordinator when global_counter > max_global_steps
+        name: A unique name for this worker
+        env: The Gym environment used by this worker
+        policy_net: Instance of the globally shared policy net
+        value_net: Instance of the globally shared value net
+        global_counter: Iterator that holds the global step
+        discount_factor: Reward discount factor
+        summary_writer: A tf.train.SummaryWriter for Tensorboard summaries
+        max_global_steps: If set, stop coordinator when global_counter > max_global_steps
     """
 
     def __init__(self, name, env, policy_net, value_net, global_counter, discount_factor=0.99,
@@ -65,7 +65,7 @@ class Worker(object):
                     sess.run(self.copy_params_op)
 
                     # Collect some experience
-                    transitions, local_t, global_t = self.run_n_steps(t_max, sess)
+                    transitions, global_t = self.run_n_steps(t_max, sess)
 
                     if self.max_global_steps is not None and global_t >= self.max_global_steps:
                         tf.logging.info("Reached global step {}. Stopping.".format(global_t))
@@ -79,21 +79,23 @@ class Worker(object):
                 return
 
     def _policy_net_predict(self, state, sess):
-        feed_dict = {self.policy_net.states: [state]}
-        preds = sess.run(self.policy_net.predictions, feed_dict)
-        return preds["probs"][0]
+        predicts = sess.run(self.policy_net.predictions, {
+            self.policy_net.states: [state]
+        })
+        return predicts["probs"][0]
 
     def _value_net_predict(self, state, sess):
-        feed_dict = {self.value_net.states: [state]}
-        preds = sess.run(self.value_net.predictions, feed_dict)
-        return preds["logits"][0]
+        predicts = sess.run(self.value_net.predictions, {
+            self.value_net.states: [state]
+        })
+        return predicts["logits"][0]
 
     def run_n_steps(self, n, sess):
         transitions = []
         for _ in range(n):
             # Take a step
-            action_probs = self._policy_net_predict(self.state, sess)
-            action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
+            action_probabilities = self._policy_net_predict(self.state, sess)
+            action = np.random.choice(np.arange(len(action_probabilities)), p=action_probabilities)
             next_state, reward, done, _ = self.env.step(action)
             next_state = self.sp.process(next_state)
             next_state = np.append(self.state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
@@ -115,7 +117,7 @@ class Worker(object):
                 break
             else:
                 self.state = next_state
-        return transitions, local_t, global_t
+        return transitions, global_t
 
     def update(self, transitions, sess):
         """
@@ -131,7 +133,7 @@ class Worker(object):
         if not transitions[-1].done:
             reward = self._value_net_predict(transitions[-1].next_state, sess)
 
-        # Accumulate minibatch exmaples
+        # Accumulate mini-batch examples
         states = []
         policy_targets = []
         value_targets = []

@@ -1,22 +1,20 @@
 import tensorflow as tf
 
 
-def build_shared_network(X, add_summaries=False):
+def build_shared_network(x):
     """
     Builds a 3-layer network conv -> conv -> fc as described
     in the A3C paper. This network is shared by both the policy and value net.
     
     Args:
-    X: Inputs
-    add_summaries: If true, add layer summaries to Tensorboard.
-    
+        x: Inputs    
     Returns:
-    Final layer activations.
+        Final layer activations.
     """
 
     # Three convolutional layers
     conv1 = tf.contrib.layers.conv2d(
-        X, 16, 8, 4, activation_fn=tf.nn.relu, scope="conv1", padding='SAME')
+        x, 16, 8, 4, activation_fn=tf.nn.relu, scope="conv1", padding='SAME')
     pool1 = tf.nn.max_pool(conv1, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
     conv2 = tf.contrib.layers.conv2d(
         pool1, 32, 4, 2, activation_fn=tf.nn.relu, scope="conv2", padding='SAME')
@@ -27,11 +25,6 @@ def build_shared_network(X, add_summaries=False):
         inputs=tf.contrib.layers.flatten(pool2),
         num_outputs=256,
         scope="fc1")
-
-    if add_summaries:
-        tf.contrib.layers.summarize_activation(conv1)
-        tf.contrib.layers.summarize_activation(conv2)
-        tf.contrib.layers.summarize_activation(fc1)
 
     return fc1
 
@@ -61,12 +54,12 @@ class PolicyEstimator:
         self.actions = tf.placeholder(shape=[None], dtype=tf.int32, name="actions")
 
         # Normalize
-        X = tf.to_float(self.states) / 255.0
+        x = tf.to_float(self.states) / 255.0
         batch_size = tf.shape(self.states)[0]
 
         # Graph shared with Value Net
         with tf.variable_scope("shared", reuse=reuse):
-            fc1 = build_shared_network(X, add_summaries=(not reuse))
+            fc1 = build_shared_network(x)
 
         with tf.variable_scope("policy_net"):
             self.logits = tf.contrib.layers.fully_connected(fc1, num_outputs, activation_fn=None)
@@ -88,10 +81,6 @@ class PolicyEstimator:
             self.losses = - (tf.log(self.picked_action_probs) * self.targets + 0.01 * self.entropy)
             self.loss = tf.reduce_sum(self.losses, name="loss")
 
-            tf.summary.scalar(self.loss.op.name, self.loss)
-            tf.summary.scalar(self.entropy_mean.op.name, self.entropy_mean)
-            tf.summary.histogram(self.entropy.op.name, self.entropy)
-
             if trainable:
                 # self.optimizer = tf.train.AdamOptimizer(1e-4)
                 self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
@@ -99,13 +88,6 @@ class PolicyEstimator:
                 self.grads_and_vars = [[grad, var] for grad, var in self.grads_and_vars if grad is not None]
                 self.train_op = self.optimizer.apply_gradients(self.grads_and_vars,
                                                                global_step=tf.contrib.framework.get_global_step())
-
-        # Merge summaries from this network and the shared network (but not the value net)
-        var_scope_name = tf.get_variable_scope().name
-        summary_ops = tf.get_collection(tf.GraphKeys.SUMMARIES)
-        summaries = [s for s in summary_ops if "policy_net" in s.name or "shared" in s.name]
-        summaries += [s for s in summary_ops if var_scope_name in s.name]
-        self.summaries = tf.summary.merge(summaries)
 
 
 class ValueEstimator:
@@ -126,11 +108,11 @@ class ValueEstimator:
         # The TD target value
         self.targets = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
 
-        X = tf.to_float(self.states) / 255.0
+        x = tf.to_float(self.states) / 255.0
 
         # Graph shared with Value Net
         with tf.variable_scope("shared", reuse=reuse):
-            fc1 = build_shared_network(X, add_summaries=(not reuse))
+            fc1 = build_shared_network(x)
 
         with tf.variable_scope("value_net"):
             self.logits = tf.contrib.layers.fully_connected(
@@ -146,18 +128,6 @@ class ValueEstimator:
                 "logits": self.logits
             }
 
-            # Summaries
-            prefix = tf.get_variable_scope().name
-            tf.summary.scalar(self.loss.name, self.loss)
-            tf.summary.scalar("{}/max_value".format(prefix), tf.reduce_max(self.logits))
-            tf.summary.scalar("{}/min_value".format(prefix), tf.reduce_min(self.logits))
-            tf.summary.scalar("{}/mean_value".format(prefix), tf.reduce_mean(self.logits))
-            tf.summary.scalar("{}/reward_max".format(prefix), tf.reduce_max(self.targets))
-            tf.summary.scalar("{}/reward_min".format(prefix), tf.reduce_min(self.targets))
-            tf.summary.scalar("{}/reward_mean".format(prefix), tf.reduce_mean(self.targets))
-            tf.summary.histogram("{}/reward_targets".format(prefix), self.targets)
-            tf.summary.histogram("{}/values".format(prefix), self.logits)
-
             if trainable:
                 # self.optimizer = tf.train.AdamOptimizer(1e-4)
                 self.optimizer = tf.train.RMSPropOptimizer(0.00025, 0.99, 0.0, 1e-6)
@@ -165,9 +135,3 @@ class ValueEstimator:
                 self.grads_and_vars = [[grad, var] for grad, var in self.grads_and_vars if grad is not None]
                 self.train_op = self.optimizer.apply_gradients(self.grads_and_vars,
                                                                global_step=tf.contrib.framework.get_global_step())
-
-        var_scope_name = tf.get_variable_scope().name
-        summary_ops = tf.get_collection(tf.GraphKeys.SUMMARIES)
-        summaries = [s for s in summary_ops if "policy_net" in s.name or "shared" in s.name]
-        summaries += [s for s in summary_ops if var_scope_name in s.name]
-        self.summaries = tf.summary.merge(summaries)

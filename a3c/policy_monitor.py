@@ -16,9 +16,9 @@ class PolicyMonitor(object):
     saving a video, and plotting summaries to Tensorboard.
 
     Args:
-    env: environment to run in
-    policy_net: A policy estimator
-    summary_writer: a tf.train.SummaryWriter used to write Tensorboard summaries
+        env: environment to run in
+        policy_net: A policy estimator
+        summary_writer: a tf.train.SummaryWriter used to write Tensorboard summaries
     """
 
     def __init__(self, env, policy_net, summary_writer, saver=None):
