@@ -96,9 +96,11 @@ class Worker(object):
             # Take a step
             action_probabilities = self._policy_net_predict(self.state, sess)
             action = np.random.choice(np.arange(len(action_probabilities)), p=action_probabilities)
-            next_state, reward, done, _ = self.env.step(action)
+            next_state, reward, done, info = self.env.step(action)
             next_state = self.sp.process(next_state)
             next_state = np.append(self.state[:, :, 1:], np.expand_dims(next_state, 2), axis=2)
+            if info["ale.lives"] == 2:
+                done = True
 
             # Store transition
             transitions.append(Transition(
