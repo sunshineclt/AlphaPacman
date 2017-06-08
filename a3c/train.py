@@ -94,3 +94,4 @@ with tf.Session() as sess:
 
     # Wait for all workers to finish
     coord.join(worker_threads)
+    summary_writer.add_graph(sess.graph)
