@@ -16,13 +16,15 @@ def build_shared_network(X, add_summaries=False):
 
     # Three convolutional layers
     conv1 = tf.contrib.layers.conv2d(
-        X, 16, 8, 4, activation_fn=tf.nn.relu, scope="conv1")
+        X, 16, 8, 4, activation_fn=tf.nn.relu, scope="conv1", padding='SAME')
+    pool1 = tf.nn.max_pool(conv1, ksize=[2, 2, 2, 2], strides=[2, 2, 2, 2], padding='SAME')
     conv2 = tf.contrib.layers.conv2d(
-        conv1, 32, 4, 2, activation_fn=tf.nn.relu, scope="conv2")
+        pool1, 32, 4, 2, activation_fn=tf.nn.relu, scope="conv2", padding='SAME')
+    pool2 = tf.nn.max_pool(conv2, ksize=[2, 2, 2, 2], strides=[2, 2, 2, 2], padding='SAME')
 
     # Fully connected layer
     fc1 = tf.contrib.layers.fully_connected(
-        inputs=tf.contrib.layers.flatten(conv2),
+        inputs=tf.contrib.layers.flatten(pool2),
         num_outputs=256,
         scope="fc1")
 
