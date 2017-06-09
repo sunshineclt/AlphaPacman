@@ -13,7 +13,7 @@ from ReplayBuffer import ReplayBuffer
 from keras import backend as K
 from skimage import color, transform, exposure
 
-from DQN.DQNAgent import DQNAgent
+from DQNAgent import DQNAgent
 
 ACTIONS = 9  # number of valid actions
 GAMMA = 0.99  # decay rate of past observations
