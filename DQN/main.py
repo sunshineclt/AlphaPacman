@@ -137,7 +137,7 @@ def train(sess, load_weight):
                 terminal_t = minibatch[i][5]
 
                 targets[i] = agent.model.predict(state_t)  # Hitting each buttom probability
-                q = agent.model.predict(state_t1)
+                q = agent.target_model.predict(state_t1)
                 inputs[i] = state_t
 
                 if terminal_t:
@@ -150,6 +150,10 @@ def train(sess, load_weight):
             s_t = s_t1
             action_index = a_t1
             step += 1
+            agent.step += 1
+            if agent.step % 100 == 0:
+                agent.target_train()
+
             # print info
             print("TIMESTEP", step,
                   "/ ACTION", action_index,
