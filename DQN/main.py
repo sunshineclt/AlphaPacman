@@ -4,6 +4,7 @@ from __future__ import print_function
 import argparse
 import json
 import random
+import platform
 
 import gym
 import numpy as np
@@ -30,15 +31,19 @@ IMG_COLS = 96
 IMG_CHANNELS = 4
 INITIALIZE_STDDEV = 0.01
 
-WEIGHT_PATH = '/Developer/Python/AlphaPacman/'
+if platform.system() == 'Darwin':
+    LOG_PATH = '/Developer/Python/AlphaPacman/'
+else:
+    LOG_PATH = '/big/AlphaPacman/'
 
 
-def process_image(image):
+def process_image(image, first=False):
     img = skimage.color.rgb2gray(image)
     img = skimage.transform.resize(img, (IMG_ROWS, IMG_COLS), mode='constant')
     img = skimage.exposure.rescale_intensity(img, out_range=(0, 255))
-    img = np.array([img])
-    img = img.reshape(1, IMG_ROWS, IMG_COLS, 1)
+    if first:
+        return img
+    img = np.reshape(np.array([img]), [1, IMG_ROWS, IMG_COLS, 1])
     return img
 
 
@@ -49,38 +54,39 @@ def train(sess, load_weight):
 
     if load_weight:
         print("Now we load weight")
-        agent.model.load_weights(WEIGHT_PATH + "model.h5")
+        agent.model.load_weights(LOG_PATH + "model.h5")
+        agent.target_model.load_weights(LOG_PATH + "model.h5")
         print("Weight load successfully")
     else:
         sess.run(tf.global_variables_initializer())
 
-    epsilon = INITIAL_EPSILON
     # prepare for tensorboard
     r_tfboard = tf.Variable(0.0)
     r_summary = tf.summary.scalar("Reward", r_tfboard)
-    summary_writer = tf.summary.FileWriter('/big/MsPacmanLog/reward_log')
+    summary_writer = tf.summary.FileWriter(LOG_PATH + 'reward_log')
     merged_summary_op = tf.summary.merge_all()
 
     # start training
+    epsilon = INITIAL_EPSILON
     for episode in range(EPISODE_COUNT):
         print("Episode: " + str(episode) + " Replay Buffer " + str(buffer.count()))
+
         x_t = env.reset()
         x_t = process_image(x_t)
         loss = 0
         total_reward = 0
         step = 0
         life_count = 3
+
+        # skip the first 80 timesteps because the game hasn't start yet
         while step < 80:
             env.render()
             env.step(0)
             step += 1
 
-        # get one channel
         env.render()
         x_t, _, _, _ = env.step(0)
-        x_t = skimage.color.rgb2gray(x_t)
-        x_t = skimage.transform.resize(x_t, (IMG_ROWS, IMG_COLS), mode='constant')
-        x_t = skimage.exposure.rescale_intensity(x_t, out_range=(0, 255))
+        x_t = process_image(x_t, first=True)
         s_t = np.stack((x_t, x_t, x_t, x_t), axis=2)
         s_t = s_t.reshape((1, s_t.shape[0], s_t.shape[1], s_t.shape[2]))
 
@@ -188,7 +194,7 @@ def play():
     env = gym.make('MsPacman-v0')
     agent = DQNAgent(LEARNING_RATE, IMG_ROWS, IMG_COLS, IMG_CHANNELS, INITIALIZE_STDDEV)
     print("Now we load weight")
-    agent.model.load_weights(WEIGHT_PATH + "model.h5")
+    agent.model.load_weights(LOG_PATH + "model.h5")
     print("Weight load successfully")
     step = 0
     x_t = env.reset()
@@ -240,9 +246,9 @@ def main(sess):
     parser = argparse.ArgumentParser(description='AlphaPacman')
     parser.add_argument('-m', '--mode', help='Train / Run', required=True)
     parser.add_argument('-l', '--load', action="store_true", help='Whether to load weight or not', required=False)
-    args = vars(parser.parse_args())
-    if args["mode"] == 'Train':
-        train(sess, args["load"])
+    args = parser.parse_args()
+    if args.mode == 'Train':
+        train(sess, args.load)
     else:
         play()
 
